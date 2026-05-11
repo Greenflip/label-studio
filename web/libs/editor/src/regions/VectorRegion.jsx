@@ -428,7 +428,30 @@ const Model = types
 
       // New methods for KonvaVector integration
       updatePointsFromKonvaVector(points) {
-        // Store whatever format KonvaVector gives us
+        // KonvaVector listens to stage mouse events directly and commits
+        // vertices at the raw cursor position, ignoring args passed to
+        // commitPoint. To make snap actually land vertices on targets, we
+        // post-process the just-added (last) vertex here: if the active
+        // control tag has geometry snap enabled and the new vertex's
+        // position resolves to a snap target, replace its coords with the
+        // target before storing.
+        const image = self.parent;
+        const tool = image?.getToolsManager?.()?.findSelectedTool?.();
+        const control = tool?.control;
+        if (control?.hasGeometrySnap && self.isDrawing && points.length > 0 && image) {
+          const last = points[points.length - 1];
+          const internalX = image.imageToInternalX(last.x);
+          const internalY = image.imageToInternalY(last.y);
+          const target = control.getSnapTarget?.({ x: internalX, y: internalY });
+          if (target) {
+            points = points.slice();
+            points[points.length - 1] = {
+              ...last,
+              x: image.internalToImageX(target.x),
+              y: image.internalToImageY(target.y),
+            };
+          }
+        }
         self.vertices.replace(points);
       },
 

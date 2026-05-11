@@ -334,11 +334,12 @@ const _Tool = types
 
       mouseupEv(_, [x, y]) {
         if (!self.isDrawing) return;
-        const snapped = self.control?.hasGeometrySnap ? self.control.getSnappedPoint({ x, y }) : { x, y };
-        const { x: rx, y: ry } = self.realCoordsFromCursor(snapped.x, snapped.y);
+        // Snap is enforced inside VectorRegion.updatePointsFromKonvaVector
+        // because KonvaVector itself reads cursor position directly from the
+        // stage and ignores commitPoint args. So we don't need to snap here;
+        // just commit at the raw coords and let the region snap the result.
+        const { x: rx, y: ry } = self.realCoordsFromCursor(x, y);
         down = false;
-
-        // skipping a frame to let KonvaVector render and update properly
         setTimeout(() => {
           self.currentArea?.commitPoint?.(rx, ry);
           self.annotation.history.unfreeze();
