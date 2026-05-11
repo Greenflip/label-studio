@@ -47,6 +47,7 @@ import { sanitizeHtml } from "../../utils/html";
  * @param {symbol|word} [granularity]       - Set control based on symbol or word selection (only for Text)
  * @param {string} [html]                   - HTML code is used to display label button instead of raw text provided by `value` (should be properly escaped)
  * @param {int} [category]                  - Category is used in the export (in label-studio-converter lib) to make an order of labels for YOLO and COCO
+ * @param {string} [snapGroup]               - Snap group name; labels sharing a group can snap to each other (image vector/polygon labels)
  */
 const TagAttrs = types.model({
   value: types.maybeNull(types.string),
@@ -64,6 +65,7 @@ const TagAttrs = types.model({
   groupcancontain: types.maybeNull(types.string),
   // childrencheck: types.optional(types.enumeration(["any", "all"]), "any")
   html: types.maybeNull(types.string),
+  snapgroup: types.maybeNull(types.string),
 });
 
 const Model = types

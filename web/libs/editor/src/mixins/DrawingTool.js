@@ -336,7 +336,8 @@ const TwoPointsDrawingTool = DrawingTool.named("TwoPointsDrawingTool")
         }
         if (!self.isDrawing) return;
         if ([DRAG_MODE, TWO_CLICKS_MODE].includes(currentMode)) {
-          self.updateDraw(x, y);
+          const snapped = self.control?.hasGeometrySnap ? self.control.getSnappedPoint({ x, y }) : { x, y };
+          self.updateDraw(snapped.x, snapped.y);
         }
       },
 
@@ -571,11 +572,13 @@ const ThreePointsDrawingTool = DrawingTool.named("ThreePointsDrawingTool")
             currentMode = DRAG_MODE;
           }
 
+          const snapped = self.control?.hasGeometrySnap ? self.control.getSnappedPoint({ x, y }) : { x, y };
+
           if (currentMode === DRAG_MODE && startPoint) {
             self.startDrawing(startPoint.x, startPoint.y);
-            self.updateDraw(x, y);
+            self.updateDraw(snapped.x, snapped.y);
           } else if (currentMode === DEFAULT_MODE) {
-            self.updateDraw(x, y);
+            self.updateDraw(snapped.x, snapped.y);
           }
         }
       },

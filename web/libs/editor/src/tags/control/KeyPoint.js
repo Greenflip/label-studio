@@ -29,7 +29,8 @@ import { SNAP_TO_PIXEL_MODE } from "../../components/ImageView/Image";
  * @param {string=} [strokeColor=#8bad00] - Keypoint stroke color in hexadecimal
  * @param {boolean} [smart]              - Show smart tool for interactive pre-annotations
  * @param {boolean} [smartOnly]          - Only show smart tool for interactive pre-annotations
- * @param {pixel|none} [snap=none]       - Snap keypoint to image pixels
+ * @param {string} [snap=none]           - Snap mode: `none`, `pixel`, `vertex`, `edge`, or any comma-separated combination (e.g. `vertex,edge`)
+ * @param {number} [snapThreshold=8]     - Snap hit-test radius in screen pixels (for `vertex`/`edge` modes)
  */
 const TagAttrs = types.model({
   toname: types.maybeNull(types.string),
@@ -38,6 +39,7 @@ const TagAttrs = types.model({
   fillcolor: types.optional(customTypes.color, "#8bad00"),
 
   snap: types.optional(types.string, "none"),
+  snapthreshold: types.optional(types.string, "8"),
 
   strokecolor: types.optional(customTypes.color, "#8bad00"),
   strokewidth: types.optional(types.string, "2"),

@@ -602,6 +602,12 @@ const HtxPolygonView = ({ item, setShapeRef }) => {
         if (item.parent.getSkipInteractions()) return;
         if (item.isDrawing) return;
 
+        // When a snap-enabled drawing tool is active, let the click bubble to
+        // the stage handler so it can place a snapped vertex on top of this
+        // region instead of selecting it.
+        const activeTool = item.parent.getToolsManager?.()?.findSelectedTool?.();
+        if (activeTool?.control?.hasGeometrySnap) return;
+
         e.cancelBubble = true;
 
         if (!item.closed) return;

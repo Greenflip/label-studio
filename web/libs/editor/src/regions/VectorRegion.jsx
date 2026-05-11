@@ -688,6 +688,12 @@ const HtxVectorView = observer(({ item, suggestion }) => {
             if (item.isDrawing) return;
             if (e.evt.altKey || e.evt.ctrlKey || e.evt.shiftKey || e.evt.metaKey) return;
 
+            // When a snap-enabled drawing tool is active, let the click bubble
+            // to the stage handler so it can place a snapped vertex on top of
+            // this region instead of selecting it.
+            const activeTool = item.parent.getToolsManager?.()?.findSelectedTool?.();
+            if (activeTool?.control?.hasGeometrySnap) return;
+
             e.cancelBubble = true;
 
             // If another region is being drawn, complete the drawing first

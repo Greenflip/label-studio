@@ -34,7 +34,8 @@ const hotkeys = Hotkey("Polygons");
  * @param {rectangle|circle} [pointStyle=circle]  - Style of points
  * @param {boolean} [smart]                       - Show smart tool for interactive pre-annotations
  * @param {boolean} [smartOnly]                   - Only show smart tool for interactive pre-annotations
- * @param {pixel|none} [snap=none]                - Snap polygon to image pixels
+ * @param {string} [snap=none]                    - Snap mode: `none`, `pixel`, `vertex`, `edge`, or any comma-separated combination (e.g. `vertex,edge`)
+ * @param {number} [snapThreshold=8]              - Snap hit-test radius in screen pixels (for `vertex`/`edge` modes)
  */
 const TagAttrs = types.model({
   toname: types.maybeNull(types.string),
@@ -46,6 +47,7 @@ const TagAttrs = types.model({
   strokecolor: types.optional(customTypes.color, "#f48a42"),
 
   snap: types.optional(types.string, "none"),
+  snapthreshold: types.optional(types.string, "8"),
 
   pointsize: types.optional(types.string, "small"),
   pointstyle: types.optional(types.string, "circle"),

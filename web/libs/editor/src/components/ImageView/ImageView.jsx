@@ -439,6 +439,39 @@ const Crosshair = memo(
   }),
 );
 
+const SnapIndicator = memo(
+  forwardRef((_, ref) => {
+    const [x, setX] = useState(0);
+    const [y, setY] = useState(0);
+    const [visible, setVisible] = useState(false);
+
+    if (ref) {
+      ref.current = {
+        updatePointer(newX, newY, isVisible) {
+          if (newX !== x) setX(newX);
+          if (newY !== y) setY(newY);
+          if (isVisible !== visible) setVisible(isVisible);
+        },
+      };
+    }
+
+    return (
+      <Layer name="snap-indicator" listening={false} opacity={visible ? 1 : 0}>
+        <Circle
+          x={x}
+          y={y}
+          radius={8}
+          stroke="#00d8ff"
+          strokeWidth={2}
+          fill="rgba(0,216,255,0.25)"
+          dash={[3, 2]}
+          listening={false}
+        />
+      </Layer>
+    );
+  }),
+);
+
 const PixelGridLayer = observer(({ item }) => {
   const ZOOM_THRESHOLD = 20;
 
@@ -521,6 +554,7 @@ export default observer(
 
     imageRef = createRef();
     crosshairRef = createRef();
+    snapIndicatorRef = createRef();
     handleDeferredMouseDown = null;
     deferredClickTimeout = [];
     skipNextMouseDown = false;
@@ -573,8 +607,15 @@ export default observer(
       const tool = item.getToolsManager().findSelectedTool();
       const isAllowedTool = tool?.toolName?.match?.(allowedHoverTypes) !== null ?? false;
 
+      // When the active tool's control has geometry snap enabled, the drawing
+      // tool claims clicks even over existing regions so the user can place a
+      // snapped vertex at a target rather than accidentally selecting the
+      // region underneath.
+      const snapClaimsClick = tool?.control?.hasGeometrySnap === true;
+
       const hoveredRegion = item.regs.find((reg) => {
         if (reg.selected || tool?.mode === "drawing") return false;
+        if (snapClaimsClick) return false;
 
         return reg.isHovered?.() ?? false;
       });
@@ -584,6 +625,9 @@ export default observer(
         hoveredRegion.onClickRegion(e);
         tool?.enable();
         return;
+      }
+      if (snapClaimsClick && item.annotation?.regionStore?.hasSelection) {
+        item.annotation.regionStore.unselectAll();
       }
       return item.event("click", evt, x, y);
     };
@@ -781,6 +825,7 @@ export default observer(
       item.freezeHistory();
 
       this.updateCrosshair(e);
+      this.updateSnapIndicator(e);
 
       const isMouseWheelClick = e.evt && e.evt.buttons === 4;
       const isDragging = e.evt && e.evt.buttons === 1;
@@ -842,6 +887,30 @@ export default observer(
       if (this.crosshairRef.current) {
         const { x, y } = e.currentTarget.getPointerPosition();
         this.crosshairRef.current.updatePointer(...this.props.item.fixZoomedCoords([x, y]));
+      }
+    };
+
+    updateSnapIndicator = (e) => {
+      const indicator = this.snapIndicatorRef.current;
+      if (!indicator) return;
+      const { item } = this.props;
+      const tool = item.getToolsManager?.()?.findSelectedTool?.();
+      const control = tool?.control;
+      if (!control?.hasGeometrySnap || typeof control.getSnapTarget !== "function") {
+        indicator.updatePointer(0, 0, false);
+        return;
+      }
+      const pointer = e.currentTarget?.getPointerPosition?.();
+      if (!pointer) return;
+      const [canvasX, canvasY] = item.fixZoomedCoords([pointer.x, pointer.y]);
+      const target = control.getSnapTarget({
+        x: item.canvasToInternalX(canvasX),
+        y: item.canvasToInternalY(canvasY),
+      });
+      if (target) {
+        indicator.updatePointer(item.internalToCanvasX(target.x), item.internalToCanvasY(target.y), true);
+      } else {
+        indicator.updatePointer(0, 0, false);
       }
     };
 
@@ -1118,6 +1187,7 @@ export default observer(
               <EntireStage
                 item={item}
                 crosshairRef={this.crosshairRef}
+                snapIndicatorRef={this.snapIndicatorRef}
                 onClick={this.handleOnClick}
                 imagePositionClassnames={imagePositionClassnames}
                 state={this.state}
@@ -1192,6 +1262,7 @@ const EntireStage = observer(
     onMouseUp,
     onWheel,
     crosshairRef,
+    snapIndicatorRef,
   }) => {
     const { store } = item;
     let size;
@@ -1238,7 +1309,7 @@ const EntireStage = observer(
         onMouseUp={onMouseUp}
         onWheel={onWheel}
       >
-        <StageContent item={item} store={store} state={state} crosshairRef={crosshairRef} />
+        <StageContent item={item} store={store} state={state} crosshairRef={crosshairRef} snapIndicatorRef={snapIndicatorRef} />
       </Stage>
     );
   },
@@ -1385,7 +1456,7 @@ const CursorLayer = observer(({ item, tool }) => {
   ) : null;
 });
 
-const StageContent = observer(({ item, store, state, crosshairRef }) => {
+const StageContent = observer(({ item, store, state, crosshairRef, snapIndicatorRef }) => {
   if (!isAlive(item)) return null;
   if (!store.task || !item.currentSrc) return null;
 
@@ -1449,6 +1520,8 @@ const StageContent = observer(({ item, store, state, crosshairRef }) => {
           height={isFF(FF_ZOOM_OPTIM) ? item.containerHeight : item.stageHeight}
         />
       )}
+
+      <SnapIndicator ref={snapIndicatorRef} />
 
       {tool && tool.toolName?.match(/bitmask/i) && <CursorLayer item={item} tool={tool} />}
     </>
