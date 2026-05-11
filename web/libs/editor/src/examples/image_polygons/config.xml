@@ -1,7 +1,14 @@
 <View>
   <Image name="img" value="$image" showMousePos="true" zoom="true"></Image>
-  <PolygonLabels name="tag" toName="img" strokewidth="5" fillcolor="red" pointstyle="circle" pointsize="small">
-    <Label value="Hello" background="red"></Label>
-    <Label value="World" background="blue"></Label>  
+  <PolygonLabels name="poly" toName="img" strokewidth="3" fillcolor="red" pointstyle="circle" pointsize="small" snap="vertex,edge" snapthreshold="12">
+    <Label value="edge" background="grey" snapgroup="roof-geom" hotkey="e"></Label>
+    <Label value="outline" background="red" snapgroup="roof-geom" hotkey="o"></Label>
+    <Label value="dormer" background="blue" snapgroup="roof-geom" hotkey="d"></Label>
+    <Label value="window" background="green" hotkey="w"></Label>
+    <Label value="chimney" background="brown" hotkey="c"></Label>
   </PolygonLabels>
+  <VectorLabels name="vec" toName="img" strokewidth="3" pointstyle="circle" pointsize="small" snap="vertex,edge" snapthreshold="12">
+    <Label value="edge" background="grey" snapgroup="roof-geom" hotkey="shift+e"></Label>
+    <Label value="inline" background="orange" snapgroup="roof-geom" hotkey="i"></Label>
+  </VectorLabels>
 </View>

@@ -3,13 +3,15 @@
 import External from "../core/External";
 import Messages from "../utils/messages";
 import { ClassificationMixed } from "../examples/classification_mixed";
+import { ImagePolygons } from "../examples/image_polygons";
 
 /**
  * Custom Data
  */
 // import { AllTypes } from "../examples/all_types";
 
-const data = ClassificationMixed;
+const data = ImagePolygons;
+// const data = ClassificationMixed;
 
 function getData(task) {
   if (task && task.data) {
