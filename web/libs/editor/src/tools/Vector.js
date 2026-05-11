@@ -305,7 +305,12 @@ const _Tool = types
           // we must skip one frame before starting a line
           // to make sure KonvaVector was fully initialized
           setTimeout(() => {
+            // Pair startPoint with an immediate commitPoint so the first
+            // vertex is actually committed even when the user clicks without
+            // dragging — matches the synchronous start+commit pattern used
+            // by VectorRegion.addPoint for click-without-drag vertex adds.
             self.currentArea.startPoint(rx, ry);
+            self.currentArea.commitPoint?.(rx, ry);
           });
         }
       },
