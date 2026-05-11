@@ -65,7 +65,7 @@ const ControlBase = types
       const currentGroups = collectGroups(self.selectedLabels);
       if (currentGroups.size === 0) return null;
       const candidates = collectSnapCandidates(self.toNameTag, currentGroups);
-      const threshold = canvasPxToInternal(self.toNameTag, Number(self.snapthreshold) || 8);
+      const threshold = screenPxToInternal(self.toNameTag, Number(self.snapthreshold) || 8);
       return findSnapTarget(point, candidates, threshold, modes);
     },
 
@@ -116,13 +116,19 @@ function collectSnapCandidates(image, currentGroups) {
     if (!overlap) continue;
 
     if (Array.isArray(region.points) && region.points.length) {
+      // PolygonRegion stores points in internal percentage coords (0-100)
       out.push({
         vertices: region.points.map((p) => ({ x: p.x, y: p.y })),
         closed: region.closed ?? true,
       });
     } else if (Array.isArray(region.vertices) && region.vertices.length) {
+      // VectorRegion stores vertices in image-pixel coords; normalize to internal
+      const toInternal =
+        typeof image.imageToInternalX === "function" && typeof image.imageToInternalY === "function"
+          ? (v) => ({ x: image.imageToInternalX(v.x), y: image.imageToInternalY(v.y) })
+          : (v) => ({ x: v.x, y: v.y });
       out.push({
-        vertices: region.vertices.map((v) => ({ x: v.x, y: v.y })),
+        vertices: region.vertices.map(toInternal),
         closed: region.closed ?? false,
       });
     }
@@ -130,9 +136,13 @@ function collectSnapCandidates(image, currentGroups) {
   return out;
 }
 
-function canvasPxToInternal(image, screenPx) {
-  if (!image || typeof image.canvasToInternalX !== "function") return screenPx;
-  return image.canvasToInternalX(screenPx);
+// Convert a screen-pixel length to internal-coord length, accounting for
+// the image's current zoom so the snap radius stays constant in screen px.
+function screenPxToInternal(image, screenPx) {
+  if (!image) return screenPx;
+  const zoomScale = image.zoomScale || 1;
+  const unzoomed = screenPx / zoomScale;
+  return typeof image.canvasToInternalX === "function" ? image.canvasToInternalX(unzoomed) : unzoomed;
 }
 
 export default types.compose(ControlBase, BaseTag);

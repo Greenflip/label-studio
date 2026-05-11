@@ -254,7 +254,8 @@ const _Tool = types
       startDrawing(x, y) {
         if (!self.canStartDrawing()) return;
 
-        const { x: rx, y: ry } = self.realCoordsFromCursor(x, y);
+        const snapped = self.control?.getSnappedPoint?.({ x, y }) ?? { x, y };
+        const { x: rx, y: ry } = self.realCoordsFromCursor(snapped.x, snapped.y);
 
         initialCursorPosition = { x: rx, y: ry };
 
@@ -319,7 +320,8 @@ const _Tool = types
 
       mousemoveEv(_, [x, y]) {
         if (!self.isDrawing) return;
-        const { x: rx, y: ry } = self.realCoordsFromCursor(x, y);
+        const snapped = self.control?.hasGeometrySnap ? self.control.getSnappedPoint({ x, y }) : { x, y };
+        const { x: rx, y: ry } = self.realCoordsFromCursor(snapped.x, snapped.y);
         if (down && self.checkDistance(rx, ry)) {
           self.currentArea?.updatePoint?.(rx, ry);
         }
@@ -327,7 +329,8 @@ const _Tool = types
 
       mouseupEv(_, [x, y]) {
         if (!self.isDrawing) return;
-        const { x: rx, y: ry } = self.realCoordsFromCursor(x, y);
+        const snapped = self.control?.hasGeometrySnap ? self.control.getSnappedPoint({ x, y }) : { x, y };
+        const { x: rx, y: ry } = self.realCoordsFromCursor(snapped.x, snapped.y);
         down = false;
 
         // skipping a frame to let KonvaVector render and update properly
@@ -380,8 +383,9 @@ const _Tool = types
 
       // Add point to current vector
       addPoint(x, y) {
-        // Convert from percentage (0-100) to real coordinates using the same formula as startDrawing
-        const { x: rx, y: ry } = self.realCoordsFromCursor(x, y);
+        // Snap cursor first, then convert from percentage (0-100) to real coordinates
+        const snapped = self.control?.getSnappedPoint?.({ x, y }) ?? { x, y };
+        const { x: rx, y: ry } = self.realCoordsFromCursor(snapped.x, snapped.y);
 
         // Try to find the area - first check getCurrentArea, then look in annotation store
         let area = self.getCurrentArea();
