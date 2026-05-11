@@ -59,14 +59,30 @@ const ControlBase = types
 
     // Returns the snap target for a point (in internal coords) if one is in
     // range, otherwise null. Pure read of geometry — does not commit anything.
+    //
+    // The geometry is computed in canvas-pixel space so Euclidean distance is
+    // uniform along x and y even when the image's aspect ratio differs
+    // significantly from the stage's. Internal coords use 0–100% in each
+    // axis independently, which means 1 internal unit on y can be a very
+    // different number of screen pixels than 1 internal unit on x.
     getSnapTarget(point) {
       const modes = parseSnapModes(self.snap);
       if (!modes.vertex && !modes.edge) return null;
       const currentGroups = collectGroups(self.selectedLabels);
       if (currentGroups.size === 0) return null;
-      const candidates = collectSnapCandidates(self.toNameTag, currentGroups);
-      const threshold = screenPxToInternal(self.toNameTag, Number(self.snapthreshold) || 8);
-      return findSnapTarget(point, candidates, threshold, modes);
+      const image = self.toNameTag;
+      if (!image || typeof image.internalToCanvasX !== "function") return null;
+      const candidates = collectSnapCandidates(image, currentGroups);
+      if (candidates.length === 0) return null;
+
+      const toCanvas = (p) => ({ x: image.internalToCanvasX(p.x), y: image.internalToCanvasY(p.y) });
+      const pointPx = toCanvas(point);
+      const candidatesPx = candidates.map((c) => ({ vertices: c.vertices.map(toCanvas), closed: c.closed }));
+      const thresholdPx = (Number(self.snapthreshold) || 8) / (image.zoomScale || 1);
+
+      const hitPx = findSnapTarget(pointPx, candidatesPx, thresholdPx, modes);
+      if (!hitPx) return null;
+      return { x: image.canvasToInternalX(hitPx.x), y: image.canvasToInternalY(hitPx.y) };
     },
 
     getSnappedPoint(point) {
