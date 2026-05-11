@@ -428,21 +428,21 @@ const Model = types
 
       // New methods for KonvaVector integration
       updatePointsFromKonvaVector(points) {
-        // KonvaVector listens to stage mouse events directly and commits
-        // vertices at the raw cursor position, ignoring args passed to
-        // commitPoint. To make snap actually land vertices on targets, we
-        // post-process the just-added (last) vertex here: if the active
-        // control tag has geometry snap enabled and the new vertex's
-        // position resolves to a snap target, replace its coords with the
-        // target before storing.
+        // KonvaVector listens to stage events directly and commits vertices
+        // at the raw cursor position, ignoring args passed to commitPoint.
+        // Snap the just-added (last) vertex here before storing — the resulting
+        // change in `vertices` flows back to KonvaVector through its
+        // `rawInitialPoints` useEffect, which detects the data change and
+        // updates its internal state so the rendered vertex moves to match.
         const image = self.parent;
         const tool = image?.getToolsManager?.()?.findSelectedTool?.();
         const control = tool?.control;
         if (control?.hasGeometrySnap && self.isDrawing && points.length > 0 && image) {
           const last = points[points.length - 1];
-          const internalX = image.imageToInternalX(last.x);
-          const internalY = image.imageToInternalY(last.y);
-          const target = control.getSnapTarget?.({ x: internalX, y: internalY });
+          const target = control.getSnapTarget?.({
+            x: image.imageToInternalX(last.x),
+            y: image.imageToInternalY(last.y),
+          });
           if (target) {
             points = points.slice();
             points[points.length - 1] = {
@@ -668,6 +668,7 @@ const HtxVectorView = observer(({ item, suggestion }) => {
           initialPoints={Array.from(item.vertices)}
           isMultiRegionSelected={item.object?.selectedRegions?.length > 1}
           disableGhostLine={disableGhostLine}
+          disableInternalPointAddition={true}
           onFinish={(e) => {
             if (disabled) return;
             e.evt.stopPropagation();

@@ -305,11 +305,10 @@ const _Tool = types
           // we must skip one frame before starting a line
           // to make sure KonvaVector was fully initialized
           setTimeout(() => {
-            // Pair startPoint with an immediate commitPoint so the first
-            // vertex is actually committed even when the user clicks without
-            // dragging — matches the synchronous start+commit pattern used
-            // by VectorRegion.addPoint for click-without-drag vertex adds.
             self.currentArea.startPoint(rx, ry);
+            // Pair with an immediate commit at the same coords so the first
+            // vertex actually persists for click-without-drag (snap is then
+            // applied via updatePointsFromKonvaVector before storage).
             self.currentArea.commitPoint?.(rx, ry);
           });
         }
@@ -334,10 +333,8 @@ const _Tool = types
 
       mouseupEv(_, [x, y]) {
         if (!self.isDrawing) return;
-        // Snap is enforced inside VectorRegion.updatePointsFromKonvaVector
-        // because KonvaVector itself reads cursor position directly from the
-        // stage and ignores commitPoint args. So we don't need to snap here;
-        // just commit at the raw coords and let the region snap the result.
+        // Snap is enforced in VectorRegion.updatePointsFromKonvaVector since
+        // KonvaVector's commitPoint ignores args. Pass raw coords here.
         const { x: rx, y: ry } = self.realCoordsFromCursor(x, y);
         down = false;
         setTimeout(() => {
