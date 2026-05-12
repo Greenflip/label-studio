@@ -10,7 +10,7 @@
         "result": [
           {
             "id": "XSMXwwsaTn",
-            "from_name": "tag",
+            "from_name": "poly",
             "to_name": "img",
             "source": "$image",
             "type": "polygonlabels",
@@ -21,7 +21,7 @@
                 [48.13333333333333, 62.61127596439169],
                 [48.13333333333333, 32.93768545994065]
               ],
-              "polygonlabels": ["Hello"]
+              "polygonlabels": ["outline"]
             }
           }
         ]
