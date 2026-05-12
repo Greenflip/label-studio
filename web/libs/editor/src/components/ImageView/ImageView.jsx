@@ -443,28 +443,34 @@ const SnapIndicator = memo(
   forwardRef((_, ref) => {
     const [x, setX] = useState(0);
     const [y, setY] = useState(0);
+    const [scale, setScale] = useState(1);
     const [visible, setVisible] = useState(false);
 
     if (ref) {
       ref.current = {
-        updatePointer(newX, newY, isVisible) {
+        updatePointer(newX, newY, isVisible, zoomScale = 1) {
           if (newX !== x) setX(newX);
           if (newY !== y) setY(newY);
+          if (zoomScale !== scale) setScale(zoomScale);
           if (isVisible !== visible) setVisible(isVisible);
         },
       };
     }
 
+    // The enclosing Layer inherits the Stage's zoom transform, so divide by
+    // zoomScale to keep the ring a constant screen-pixel size at any zoom.
+    const inv = scale > 0 ? 1 / scale : 1;
     return (
       <Layer name="snap-indicator" listening={false} opacity={visible ? 1 : 0}>
         <Circle
           x={x}
           y={y}
-          radius={8}
+          radius={8 * inv}
           stroke="#00d8ff"
           strokeWidth={2}
+          strokeScaleEnabled={false}
           fill="rgba(0,216,255,0.25)"
-          dash={[3, 2]}
+          dash={[3 * inv, 2 * inv]}
           listening={false}
         />
       </Layer>
@@ -897,7 +903,7 @@ export default observer(
       const tool = item.getToolsManager?.()?.findSelectedTool?.();
       const control = tool?.control;
       if (!control?.hasGeometrySnap || typeof control.getSnapTarget !== "function") {
-        indicator.updatePointer(0, 0, false);
+        indicator.updatePointer(0, 0, false, item.zoomScale || 1);
         return;
       }
       const pointer = e.currentTarget?.getPointerPosition?.();
@@ -907,10 +913,11 @@ export default observer(
         x: item.canvasToInternalX(canvasX),
         y: item.canvasToInternalY(canvasY),
       });
+      const zoomScale = item.zoomScale || 1;
       if (target) {
-        indicator.updatePointer(item.internalToCanvasX(target.x), item.internalToCanvasY(target.y), true);
+        indicator.updatePointer(item.internalToCanvasX(target.x), item.internalToCanvasY(target.y), true, zoomScale);
       } else {
-        indicator.updatePointer(0, 0, false);
+        indicator.updatePointer(0, 0, false, zoomScale);
       }
     };
 
