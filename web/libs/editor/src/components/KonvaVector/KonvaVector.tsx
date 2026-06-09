@@ -289,6 +289,7 @@ export const KonvaVector = forwardRef<KonvaVectorRef, KonvaVectorProps>((props, 
     pointStrokeSelected = DEFAULT_POINT_STROKE_SELECTED,
     pointStrokeWidth = DEFAULT_POINT_STROKE_WIDTH,
     pointStyle = "circle",
+    directed = false,
   } = props;
 
   // Normalize input points to BezierPoint format
@@ -3592,6 +3593,7 @@ export const KonvaVector = forwardRef<KonvaVectorRef, KonvaVectorProps>((props, 
             segments={getAllLineSegments()}
             allowClose={allowClose}
             isPathClosed={finalIsPathClosed}
+            directed={directed}
             stroke={stroke}
             fill={fill}
             strokeWidth={props.strokeWidth}
@@ -4006,6 +4008,7 @@ export const KonvaVector = forwardRef<KonvaVectorRef, KonvaVectorProps>((props, 
             segments={getAllLineSegments()}
             allowClose={allowClose}
             isPathClosed={finalIsPathClosed}
+            directed={directed}
             stroke={stroke}
             fill={fill}
             strokeWidth={props.strokeWidth}

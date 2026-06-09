@@ -8,6 +8,7 @@ interface VectorShapeProps {
   segments: Array<{ from: BezierPoint; to: BezierPoint }>;
   allowClose?: boolean;
   isPathClosed?: boolean;
+  directed?: boolean;
   stroke?: string;
   fill?: string;
   strokeWidth?: number;
@@ -70,6 +71,27 @@ function segmentsToPathData(
   }
 
   return pathData;
+}
+
+// Build an SVG triangle (arrowhead) at the END of the last segment, pointing in
+// the path's travel direction. `screenSize` is divided by effectiveZoom so the
+// arrow stays ~constant on screen, matching the constant-width stroke.
+function arrowHeadPathData(
+  segments: Array<{ from: BezierPoint; to: BezierPoint }>,
+  effectiveZoom: number,
+  screenSize = 13,
+): string {
+  if (segments.length === 0) return "";
+  const last = segments[segments.length - 1];
+  const { x: tipX, y: tipY } = last.to;
+  const angle = Math.atan2(last.to.y - last.from.y, last.to.x - last.from.x);
+  const size = screenSize / (effectiveZoom || 1);
+  const spread = 0.45;
+  const lx = tipX - size * Math.cos(angle - spread);
+  const ly = tipY - size * Math.sin(angle - spread);
+  const rx = tipX - size * Math.cos(angle + spread);
+  const ry = tipY - size * Math.sin(angle + spread);
+  return `M ${tipX} ${tipY} L ${lx} ${ly} L ${rx} ${ry} Z`;
 }
 
 // Group segments into connected paths for skeleton mode
@@ -208,6 +230,7 @@ export const VectorShape: React.FC<VectorShapeProps> = ({
   segments,
   allowClose = false,
   isPathClosed = false,
+  directed = false,
   stroke = "#3b82f6",
   fill = "rgba(239, 68, 68, 0.3)",
   strokeWidth = 2,
@@ -292,6 +315,9 @@ export const VectorShape: React.FC<VectorShapeProps> = ({
   }
   // Use the grouped path approach for non-skeleton mode
   const pathGroups = groupSegmentsIntoPaths(segments);
+
+  // Direction arrow at the path end (open paths only).
+  const arrowData = directed && !isPathClosed ? arrowHeadPathData(segments, effectiveZoom) : "";
 
   return (
     <>
@@ -393,6 +419,16 @@ export const VectorShape: React.FC<VectorShapeProps> = ({
           />
         );
       })}
+      {arrowData && (
+        <Path
+          data={arrowData}
+          stroke={stroke}
+          strokeWidth={strokeWidth}
+          strokeScaleEnabled={false}
+          fill={stroke}
+          listening={false}
+        />
+      )}
     </>
   );
 };

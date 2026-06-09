@@ -36,6 +36,7 @@ const hotkeys = Hotkey("Vectors");
  * @param {boolean} [smartOnly]                   - Only show smart tool for interactive pre-annotations
  * @param {pixel|none} [snap=none]                - Snap vector to image pixels
  * @param {boolean} [closable=false]              - Allow closed shapes
+ * @param {boolean} [directed=false]              - Draw a direction arrow at the path end (open paths only)
  * @param {boolean} [skeleton=false]              - Enables skeleton mode to allow branch paths
  * @param {number|none} [minPoints=none]          - Minimum allowed number of points
  * @param {number|none} [maxPoints=none]          - Maximum allowed number of points
@@ -57,6 +58,7 @@ const TagAttrs = types.model({
   pointstyle: types.optional(types.string, "circle"),
 
   closable: types.optional(types.maybeNull(types.boolean), false),
+  directed: types.optional(types.maybeNull(types.boolean), false),
   curves: types.optional(types.maybeNull(types.boolean), false),
   minpoints: types.optional(types.maybeNull(types.string), null),
   maxpoints: types.optional(types.maybeNull(types.string), null),

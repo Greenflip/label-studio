@@ -172,6 +172,8 @@ export interface KonvaVectorProps {
   maxPoints?: number;
   /** Enable skeleton mode for point connections */
   skeletonEnabled?: boolean;
+  /** Draw a direction arrow at the path end (open paths only) */
+  directed?: boolean;
   /** Export format: "simple" or "regular" */
   format?: ExportFormat;
   /** Stroke color for the vector path */

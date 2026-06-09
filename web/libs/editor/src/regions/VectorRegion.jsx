@@ -643,6 +643,7 @@ const HtxVectorView = observer(({ item, suggestion }) => {
         <KonvaVector
           ref={(kv) => item.setKonvaVectorRef(kv)}
           initialPoints={Array.from(item.vertices)}
+          directed={item.parent?.directed}
           isMultiRegionSelected={item.object?.selectedRegions?.length > 1}
           disableGhostLine={disableGhostLine}
           onFinish={(e) => {
