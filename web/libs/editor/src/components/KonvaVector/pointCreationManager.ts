@@ -1,7 +1,7 @@
 import type { BezierPoint, GhostPoint } from "./types";
 import { PointType } from "./types";
 import { HIT_RADIUS } from "./constants";
-import { snapToPixel, getDistance } from "./eventHandlers/utils";
+import { snapToPixel, getDistance, findClosestPointOnPath } from "./eventHandlers/utils";
 import { generatePointId } from "./utils";
 
 export interface PointCreationState {
@@ -55,6 +55,48 @@ export class PointCreationManager {
     this.props = props;
   }
 
+  /**
+   * Snap a candidate position onto EXISTING geometry of this region: first to the
+   * nearest vertex, else to the nearest point on an edge, within a zoom-constant
+   * radius (the same one used for point hit-testing). Returns snapped:true when it
+   * locked onto geometry, so the caller skips pixel-grid snapping and the points
+   * coincide exactly. Only active when snap ("pixel") is enabled.
+   */
+  private snapToGeometry(x: number, y: number): { x: number; y: number; snapped: boolean } {
+    const pts = this.props?.initialPoints ?? [];
+    if (!this.props || pts.length === 0) return { x, y, snapped: false };
+    const scale = (this.props.transform?.zoom ?? 1) * (this.props.fitScale ?? 1) || 1;
+    const radius = HIT_RADIUS.SELECTION / scale;
+
+    // 1) nearest existing vertex wins
+    let best: BezierPoint | null = null;
+    let bestDist = radius;
+    for (const p of pts) {
+      const d = getDistance({ x, y }, p);
+      if (d <= bestDist) {
+        bestDist = d;
+        best = p;
+      }
+    }
+    if (best) return { x: best.x, y: best.y, snapped: true };
+
+    // 2) else nearest point on an existing edge
+    const onPath = findClosestPointOnPath({ x, y }, pts);
+    if (onPath && getDistance({ x, y }, onPath.point) <= radius) {
+      return { x: onPath.point.x, y: onPath.point.y, snapped: true };
+    }
+    return { x, y, snapped: false };
+  }
+
+  /** Geometry snap (to existing vertex/edge) first, else pixel-grid snap. */
+  private snapCoords(x: number, y: number): { x: number; y: number } {
+    if (this.props?.pixelSnapping) {
+      const geo = this.snapToGeometry(x, y);
+      if (geo.snapped) return { x: geo.x, y: geo.y };
+    }
+    return snapToPixel({ x, y }, this.props?.pixelSnapping);
+  }
+
   // ===== PROGRAMMATIC POINT CREATION METHODS =====
 
   startPoint(x: number, y: number): boolean {
@@ -72,8 +114,8 @@ export class PointCreationManager {
       return false;
     }
 
-    // Snap to pixel grid if enabled
-    const snappedCoords = snapToPixel({ x, y }, this.props.pixelSnapping);
+    // Snap onto existing geometry (vertex/edge) if enabled, else pixel grid
+    const snappedCoords = this.snapCoords(x, y);
 
     // Check if we're within canvas bounds (only if bounds checking is enabled)
     if (this.props.width && this.props.height) {
@@ -196,8 +238,9 @@ export class PointCreationManager {
       nextPointId = this.props.ghostPoint.nextPointId;
     }
 
-    // Snap to pixel grid if enabled
-    const snappedCoords = snapToPixel({ x: finalX, y: finalY }, this.props.pixelSnapping);
+    // Snap onto existing geometry (vertex/edge) if enabled, else pixel grid.
+    // This is what makes a drawn line's endpoint lock onto an existing point/edge.
+    const snappedCoords = this.snapCoords(finalX, finalY);
 
     // Check if we're within canvas bounds (only if bounds checking is enabled)
     if (this.props.width && this.props.height) {
@@ -296,8 +339,8 @@ export class PointCreationManager {
       return false;
     }
 
-    // Snap to pixel grid if enabled
-    const snappedCoords = snapToPixel({ x, y }, this.props.pixelSnapping);
+    // Snap onto existing geometry (vertex/edge) if enabled, else pixel grid
+    const snappedCoords = this.snapCoords(x, y);
 
     // Check if we're within canvas bounds (only if bounds checking is enabled)
     if (this.props.width && this.props.height) {
