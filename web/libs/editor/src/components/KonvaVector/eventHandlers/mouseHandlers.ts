@@ -945,44 +945,58 @@ export function createClickHandler(props: EventHandlerProps, handledSelectionInM
         const scale = props.transform.zoom * props.fitScale;
         const hitRadius = HIT_RADIUS.SELECTION / scale;
 
-        // Check if we clicked on any point to delete it
+        // Find the nearest vertex AND the nearest segment, then act on whichever
+        // the click is closest to: Alt+click on an edge deletes THAT edge (even
+        // near a junction), while Alt+click on a node still deletes the node.
+        const segmentHitRadius = 15 / scale; // Slightly larger than point hit radius
+
+        let nearestPointIdx = -1;
+        let nearestPointDist = Number.POSITIVE_INFINITY;
         for (let i = 0; i < props.initialPoints.length; i++) {
           const point = props.initialPoints[i];
-          const distance = Math.sqrt((imagePos.x - point.x) ** 2 + (imagePos.y - point.y) ** 2);
-
-          if (distance <= hitRadius) {
-            deletePoint(
-              i,
-              props.initialPoints,
-              props.selectedPointIndex,
-              props.setSelectedPointIndex,
-              props.setVisibleControlPoints,
-              props.onPointSelected,
-              props.onPointRemoved,
-              props.onPointsChange,
-              props.setLastAddedPointId,
-              props.lastAddedPointId,
-            );
-            // Stop event propagation to prevent point addition
-            e.evt.stopPropagation();
-            e.evt.preventDefault();
-            e.cancelBubble = true;
-            return;
+          const d = Math.sqrt((imagePos.x - point.x) ** 2 + (imagePos.y - point.y) ** 2);
+          if (d < nearestPointDist) {
+            nearestPointDist = d;
+            nearestPointIdx = i;
           }
         }
 
-        // If we didn't click on a point, check if we clicked on a segment to break/delete it
-        const segmentHitRadius = 15 / scale; // Slightly larger than point hit radius
-
-        // Find the closest point on the path
         const closestPathPoint = findClosestPointOnPath(
           imagePos,
           props.initialPoints,
           props.allowClose,
           props.isPathClosed,
         );
+        const nearestSegDist = closestPathPoint
+          ? getDistance(imagePos, closestPathPoint.point)
+          : Number.POSITIVE_INFINITY;
 
-        if (closestPathPoint && getDistance(imagePos, closestPathPoint.point) <= segmentHitRadius) {
+        const pointInRange = nearestPointIdx >= 0 && nearestPointDist <= hitRadius;
+        const segInRange = !!closestPathPoint && nearestSegDist <= segmentHitRadius;
+        // Edge wins only when clearly closer than the nearest vertex (2px margin),
+        // so clicking exactly on a junction still removes the node.
+        const preferEdge = segInRange && nearestSegDist + 2 / scale < nearestPointDist;
+
+        if (pointInRange && !preferEdge) {
+          deletePoint(
+            nearestPointIdx,
+            props.initialPoints,
+            props.selectedPointIndex,
+            props.setSelectedPointIndex,
+            props.setVisibleControlPoints,
+            props.onPointSelected,
+            props.onPointRemoved,
+            props.onPointsChange,
+            props.setLastAddedPointId,
+            props.lastAddedPointId,
+          );
+          e.evt.stopPropagation();
+          e.evt.preventDefault();
+          e.cancelBubble = true;
+          return;
+        }
+
+        if (segInRange) {
           // For closed paths, break the path at the segment
           if (props.isPathClosed && props.allowClose) {
             if (breakPathAtSegment(props, closestPathPoint.segmentIndex)) {

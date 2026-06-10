@@ -2,7 +2,13 @@ import type { KonvaEventObject } from "konva/lib/Node";
 import type { EventHandlerProps } from "./types";
 import { PointType } from "../types";
 import { HIT_RADIUS } from "../constants";
-import { getDistance, isPointInCanvasBounds, snapToPixel, stageToImageCoordinates } from "./utils";
+import {
+  findClosestPointOnPath,
+  getDistance,
+  isPointInCanvasBounds,
+  snapToPixel,
+  stageToImageCoordinates,
+} from "./utils";
 
 export interface AddPointOptions {
   x: number;
@@ -161,8 +167,32 @@ export function handleDrawingModeClick(e: KonvaEventObject<MouseEvent>, props: E
     return false;
   }
 
-  // Snap to pixel grid if enabled
-  const snappedPos = snapToPixel(imagePos, props.pixelSnapping);
+  // Snap onto existing geometry (nearest vertex first, then nearest edge) when
+  // snapping is on, else the pixel grid. The snap radius MUST be larger than the
+  // point hit-radius (HIT_RADIUS.SELECTION): clicks within that radius are
+  // intercepted upstream as "clicked on existing point" and never reach here, so
+  // snapping can only engage in the band beyond it.
+  let snappedPos = snapToPixel(imagePos, props.pixelSnapping);
+  if (props.pixelSnapping && props.initialPoints.length > 0) {
+    const scale = props.transform.zoom * props.fitScale || 1;
+    const snapRadius = (HIT_RADIUS.SELECTION + 16) / scale; // ~26px on screen
+    let best: { x: number; y: number } | null = null;
+    let bestDist = snapRadius;
+    for (const p of props.initialPoints) {
+      const d = getDistance(imagePos, p);
+      if (d <= bestDist) {
+        bestDist = d;
+        best = { x: p.x, y: p.y };
+      }
+    }
+    if (!best) {
+      const onPath = findClosestPointOnPath(imagePos, props.initialPoints);
+      if (onPath && getDistance(imagePos, onPath.point) <= snapRadius) {
+        best = { x: onPath.point.x, y: onPath.point.y };
+      }
+    }
+    if (best) snappedPos = best;
+  }
 
   // Check if we're clicking near the first point to close the path
   if (props.allowClose && !props.isPathClosed && props.initialPoints.length > 0) {

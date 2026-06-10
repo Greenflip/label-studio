@@ -66,7 +66,9 @@ export class PointCreationManager {
     const pts = this.props?.initialPoints ?? [];
     if (!this.props || pts.length === 0) return { x, y, snapped: false };
     const scale = (this.props.transform?.zoom ?? 1) * (this.props.fitScale ?? 1) || 1;
-    const radius = HIT_RADIUS.SELECTION / scale;
+    // Larger than the point hit-radius so the snap band sits OUTSIDE the
+    // "clicked on existing point" interception zone (HIT_RADIUS.SELECTION).
+    const radius = (HIT_RADIUS.SELECTION + 16) / scale;
 
     // 1) nearest existing vertex wins
     let best: BezierPoint | null = null;
