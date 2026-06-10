@@ -992,22 +992,30 @@ export function createClickHandler(props: EventHandlerProps, handledSelectionInM
               return;
             }
           } else {
-            // For unclosed paths, delete the segment by removing the connection
-            // This splits the path into two separate paths
+            // For unclosed/skeleton paths, delete just this edge by removing the
+            // prevPointId link of the segment's "to" point — both endpoints stay.
             const segmentIndex = closestPathPoint.segmentIndex;
             if (segmentIndex >= 0 && segmentIndex < props.initialPoints.length) {
               const pointToBreak = props.initialPoints[segmentIndex];
               if (pointToBreak.prevPointId) {
-                // Remove the prevPointId to break the connection
-                const updatedPoints = props.initialPoints.map((point, idx) => {
-                  if (idx === segmentIndex) {
-                    return {
-                      ...point,
-                      prevPointId: undefined,
-                    };
-                  }
-                  return point;
-                });
+                let updatedPoints = props.initialPoints.map((point, idx) =>
+                  idx === segmentIndex ? { ...point, prevPointId: undefined } : point,
+                );
+                // If the broken point is now fully isolated (no link in or out)
+                // AND sits exactly on another point, it was only a cycle-closing
+                // duplicate — drop it so deleting the edge leaves no stray point.
+                const broken = updatedPoints[segmentIndex];
+                const referenced = new Set(updatedPoints.map((p) => p.prevPointId).filter(Boolean));
+                const isIsolated = !broken.prevPointId && !referenced.has(broken.id);
+                const hasTwin = updatedPoints.some(
+                  (p, idx) =>
+                    idx !== segmentIndex &&
+                    Math.abs(p.x - broken.x) < 0.01 &&
+                    Math.abs(p.y - broken.y) < 0.01,
+                );
+                if (isIsolated && hasTwin) {
+                  updatedPoints = updatedPoints.filter((_, idx) => idx !== segmentIndex);
+                }
 
                 props.onPointsChange?.(updatedPoints);
                 e.evt.stopPropagation();
