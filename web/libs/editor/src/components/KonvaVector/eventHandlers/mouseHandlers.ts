@@ -799,6 +799,7 @@ export function createMouseUpHandler(props: EventHandlerProps) {
       const pointIndex = props.draggedPointIndex;
       const shouldClose = shouldClosePathOnPointClick(pointIndex, props, e) && isActivePointEligibleForClosing(props);
 
+      const target = props.initialPoints[pointIndex];
       if (shouldClose) {
         // Try to close the path instead of selecting the point
         const fromPointIndex = pointIndex;
@@ -808,6 +809,21 @@ export function createMouseUpHandler(props: EventHandlerProps) {
           // Path closing failed, fall back to point selection
           handlePointSelectionFromIndex(pointIndex, props, e);
         }
+      } else if (
+        props.skeletonEnabled &&
+        props.isDrawingMode &&
+        !props.isPathClosed &&
+        props.activePointId &&
+        target &&
+        target.id !== props.activePointId &&
+        props.canAddMorePoints?.()
+      ) {
+        // Drawing mode: clicking an existing vertex CONNECTS the current line to
+        // it — add an edge from the active point to a point coincident with the
+        // target (the coincident-drag logic keeps them as one shared junction),
+        // then keep drawing from that vertex.
+        props.pointCreationManager?.createRegularPointAt(target.x, target.y, props.activePointId);
+        props.setActivePointId?.(target.id);
       } else {
         // Normal point selection
         handlePointSelectionFromIndex(pointIndex, props, e);

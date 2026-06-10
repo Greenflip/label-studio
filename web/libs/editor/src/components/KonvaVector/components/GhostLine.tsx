@@ -166,6 +166,44 @@ export const GhostLine: React.FC<GhostLineProps> = ({
               }
             }
 
+            // Snap PREVIEW: if snapping is on and the cursor is near an existing
+            // vertex (or, failing that, an edge), draw the ghost line to that snap
+            // target and mark it, so the user sees exactly where the point will
+            // land. This runs BEFORE the hover-hide checks below so the line shows
+            // (snapped) instead of disappearing near geometry.
+            if (cursorPos && pixelSnapping && activePoint && initialPoints.length > 0) {
+              const snapRadius = (HIT_RADIUS.SELECTION + 16) / scale; // > point hit radius
+              let snapTarget: { x: number; y: number } | null = null;
+              let bestDist = snapRadius;
+              for (let i = 0; i < initialPoints.length; i++) {
+                const p = initialPoints[i];
+                if (p.id === activePoint.id) continue; // never snap to where we draw from
+                const d = Math.sqrt((cursorPos.x - p.x) ** 2 + (cursorPos.y - p.y) ** 2);
+                if (d <= bestDist) {
+                  bestDist = d;
+                  snapTarget = { x: p.x, y: p.y };
+                }
+              }
+              if (!snapTarget && initialPoints.length >= 2) {
+                const onPath = findClosestPointOnPath(cursorPos, initialPoints, allowClose, isPathClosed);
+                if (onPath && getDistance(cursorPos, onPath.point) <= snapRadius) {
+                  snapTarget = onPath.point;
+                }
+              }
+              if (snapTarget) {
+                ctx.beginPath();
+                ctx.moveTo(activePoint.x, activePoint.y);
+                ctx.lineTo(snapTarget.x, snapTarget.y);
+                ctx.strokeShape(shape);
+                // marker at the snap target
+                ctx.beginPath();
+                ctx.arc(snapTarget.x, snapTarget.y, 5 / scale, 0, Math.PI * 2);
+                ctx.fillStyle = stroke;
+                ctx.fill();
+                return;
+              }
+            }
+
             // Check if hovering over points (except last point and first point when closing is possible)
             if (cursorPos && initialPoints.length > 0) {
               const selectionHitRadius = HIT_RADIUS.SELECTION / scale;
