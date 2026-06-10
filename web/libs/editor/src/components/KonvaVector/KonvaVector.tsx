@@ -2921,6 +2921,23 @@ export const KonvaVector = forwardRef<KonvaVectorRef, KonvaVectorProps>((props, 
           const snappedPos = snapToPixel(imagePos, pixelSnapping);
           const finalPos = constrainAnchorPointsToBounds([snappedPos], { width, height })[0];
 
+          // Skeleton/graph mode: a junction can be made of several coincident
+          // points (a cyclic graph needs duplicate points for its cycle-closing
+          // edges). Move every point coincident with the dragged one by the same
+          // amount so the whole junction drags as ONE node and stays snapped.
+          if (skeletonEnabled) {
+            const curX = draggedPoint.x;
+            const curY = draggedPoint.y;
+            const COINCIDENT_EPS = 0.01;
+            for (let i = 0; i < newPoints.length; i++) {
+              if (i === draggedPointIndex) continue;
+              const p = newPoints[i];
+              if (Math.abs(p.x - curX) <= COINCIDENT_EPS && Math.abs(p.y - curY) <= COINCIDENT_EPS) {
+                newPoints[i] = { ...p, x: finalPos.x, y: finalPos.y };
+              }
+            }
+          }
+
           newPoints[draggedPointIndex] = {
             ...draggedPoint,
             x: finalPos.x,
