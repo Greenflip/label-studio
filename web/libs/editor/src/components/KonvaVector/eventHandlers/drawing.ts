@@ -173,7 +173,8 @@ export function handleDrawingModeClick(e: KonvaEventObject<MouseEvent>, props: E
   // intercepted upstream as "clicked on existing point" and never reach here, so
   // snapping can only engage in the band beyond it.
   let snappedPos = snapToPixel(imagePos, props.pixelSnapping);
-  if (props.pixelSnapping && props.initialPoints.length > 0) {
+  // Geometry snapping is always on (independent of pixelSnapping / snap="pixel").
+  if (props.initialPoints.length > 0) {
     const scale = props.transform.zoom * props.fitScale || 1;
     const snapRadius = (HIT_RADIUS.SELECTION + 16) / scale; // ~26px on screen
     let best: { x: number; y: number } | null = null;

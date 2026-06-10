@@ -171,7 +171,10 @@ export const GhostLine: React.FC<GhostLineProps> = ({
             // target and mark it, so the user sees exactly where the point will
             // land. This runs BEFORE the hover-hide checks below so the line shows
             // (snapped) instead of disappearing near geometry.
-            if (cursorPos && pixelSnapping && activePoint && initialPoints.length > 0) {
+            // Note: geometry snapping is independent of pixelSnapping (snap="pixel"
+            // only governs the pixel grid). It is always on so a new edge can lock
+            // onto existing vertices/edges regardless of the control's snap setting.
+            if (cursorPos && activePoint && initialPoints.length > 0) {
               const snapRadius = (HIT_RADIUS.SELECTION + 16) / scale; // > point hit radius
               let snapTarget: { x: number; y: number } | null = null;
               let bestDist = snapRadius;

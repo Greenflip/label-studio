@@ -90,12 +90,11 @@ export class PointCreationManager {
     return { x, y, snapped: false };
   }
 
-  /** Geometry snap (to existing vertex/edge) first, else pixel-grid snap. */
+  /** Geometry snap (to existing vertex/edge) first, else pixel-grid snap.
+   * Geometry snapping is always on, independent of pixelSnapping (snap="pixel"). */
   private snapCoords(x: number, y: number): { x: number; y: number } {
-    if (this.props?.pixelSnapping) {
-      const geo = this.snapToGeometry(x, y);
-      if (geo.snapped) return { x: geo.x, y: geo.y };
-    }
+    const geo = this.snapToGeometry(x, y);
+    if (geo.snapped) return { x: geo.x, y: geo.y };
     return snapToPixel({ x, y }, this.props?.pixelSnapping);
   }
 
