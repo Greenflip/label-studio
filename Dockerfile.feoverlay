@@ -1,0 +1,47 @@
+# syntax=docker/dockerfile:1
+# Frontend-only overlay: build the LSF/editor frontend from this branch and
+# layer it onto the official prebuilt backend image. Avoids recompiling the
+# Python deps (notably opencv-python-headless, which builds from source on
+# Alpine and takes ~an hour). Stage below is copied verbatim from Dockerfile's
+# frontend-builder so the prior build's layer/cache-mount cache is reused.
+ARG NODE_VERSION=22
+
+FROM node:${NODE_VERSION}-alpine AS frontend-builder
+ENV BUILD_NO_SERVER=true \
+    BUILD_NO_HASH=true \
+    BUILD_NO_CHUNKS=true \
+    BUILD_MODULE=true \
+    YARN_CACHE_FOLDER=/root/web/.yarn \
+    NX_CACHE_DIRECTORY=/root/web/.nx \
+    NODE_ENV=production \
+    NODE_OPTIONS="--max-old-space-size=4096"
+
+WORKDIR /label-studio/web
+
+RUN apk add --no-cache \
+    build-base \
+    pkgconfig \
+    cairo-dev \
+    giflib-dev \
+    libjpeg-turbo-dev \
+    libpng-dev \
+    pango-dev \
+    git \
+    python3
+
+COPY web/package.json .
+COPY web/yarn.lock .
+COPY web/tools tools
+RUN --mount=type=cache,target=/root/web/.yarn,id=yarn-cache,sharing=locked \
+    --mount=type=cache,target=/root/web/.nx,id=nx-cache,sharing=locked \
+    yarn install --prefer-offline --no-progress --pure-lockfile --frozen-lockfile --ignore-engines --non-interactive --production=false
+
+COPY web/ .
+COPY pyproject.toml ../pyproject.toml
+RUN --mount=type=cache,target=/root/web/.yarn,id=yarn-cache,sharing=locked \
+    --mount=type=cache,target=/root/web/.nx,id=nx-cache,sharing=locked \
+    yarn run build
+
+################################ Overlay onto official backend image
+FROM heartexlabs/label-studio:latest
+COPY --from=frontend-builder --chown=1001:0 /label-studio/web/dist /label-studio/web/dist
